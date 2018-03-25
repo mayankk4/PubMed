@@ -1,3 +1,6 @@
+# pip install openpyxl
+# python parser.py
+
 from openpyxl import load_workbook
 from openpyxl import Workbook
 import pickle
@@ -11,14 +14,16 @@ health_codes_data = []
 research_activity_code_data = []
 
 total_row_count = 0
-for i in range(1, 24):              #number of files = 23
-    filename = "data/" + str(i) + ".xlsx"       #file names are modified to go from 0-23
+for i in range(1, 24):                          #number of files = 23
+    filename = "data/" + str(i) + ".xlsx"       #file names are modified to go from 1-23
     wb = load_workbook(filename = filename, read_only=True)
-    ws = wb['PubMed2XL']            #worksheet "PubMed2XL" in the loaded workbook
+    ws = wb['PubMed2XL']                        #worksheet "PubMed2XL" in the loaded workbook
 
     label_row = tuple(ws.rows)[0]
     num_columns = len(label_row)
 
+    # Since every xlsx file has a different layout of columns, we need to find out the
+    # index of the columns we wish to extract
     pmid_column_id = -1
     title_column_id = -1
     abstract_column_id = -1
@@ -41,6 +46,7 @@ for i in range(1, 24):              #number of files = 23
             research_activity_code_column_id = j
 
 
+    # There should not be any corrputed files eventually since we fix them.
     if (pmid_column_id == -1) or (title_column_id == -1) or (abstract_column_id == -1) or (broad_category_column_id == -1) or (health_code_column_id == -1) or (research_activity_code_column_id == -1):
         print "CORRUPTED FILE " + filename
         for j in range(num_columns):
@@ -58,7 +64,12 @@ for i in range(1, 24):              #number of files = 23
             continue
 
         title = row[title_column_id].value
+
         abstract = row[abstract_column_id].value
+        # If we want to train over documents where the abstract is not preset,
+        # comment the following 2 lines.
+        if (abstract is None) or (abstract != ""):
+            continue
 
         broad_category = ""
         health_code = ""
@@ -70,15 +81,15 @@ for i in range(1, 24):              #number of files = 23
         if (research_activity_code_column_id != -1):
             research_activity_code = row[research_activity_code_column_id].value
 
-        if (broad_category is not None) and (broad_category != "") and (abstract is not None) and (abstract != ""):
+        if (broad_category is not None) and (broad_category != ""):
             # print title + " ::: " + broad_category
             broad_category_data.append([pmid_str, title, abstract, broad_category])
 
-        if (health_code is not None) and (health_code != "") and (abstract is not None) and (abstract != ""):
+        if (health_code is not None) and (health_code != ""):
             # print title + " ::: " + health_code
             health_codes_data.append([pmid_str, title, abstract, health_code])
 
-        if (research_activity_code is not None) and (research_activity_code != "") and (abstract is not None) and (abstract != ""):
+        if (research_activity_code is not None) and (research_activity_code != ""):
             # print title + " ::: " + research_activity_code
             research_activity_code_data.append([pmid_str, title, abstract, research_activity_code])
 
@@ -88,13 +99,13 @@ print "Broad category training set size: " + str(len(broad_category_data))
 print "Health codes training set size: " + str(len(health_codes_data))
 print "Research activity codes training set size: " + str(len(research_activity_code_data))
 
-with open('output/broad_category_data1.obj', 'wb') as fp:
+with open('output/broad_category_data.obj', 'wb') as fp:
     pickle.dump(broad_category_data, fp)
 
-with open('output/health_codes_data1.obj', 'wb') as fp:
+with open('output/health_codes_data.obj', 'wb') as fp:
     pickle.dump(health_codes_data, fp)
 
-with open('output/research_activity_code_data1.obj', 'wb') as fp:
+with open('output/research_activity_code_data.obj', 'wb') as fp:
     pickle.dump(research_activity_code_data, fp)
 
 
